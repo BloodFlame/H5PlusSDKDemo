@@ -1,6 +1,7 @@
 package com.example.H5PlusPlugin;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import io.dcloud.common.DHInterface.IWebview;
 import io.dcloud.common.DHInterface.StandardFeature;
@@ -13,6 +14,7 @@ import org.json.JSONObject;
 import com.hyphenate.EMCallBack;
 import com.hyphenate.EMMessageListener;
 import com.hyphenate.chat.EMClient;
+import com.hyphenate.chat.EMConversation;
 import com.hyphenate.chat.EMMessage;
 import com.hyphenate.chat.EMOptions;
 
@@ -36,7 +38,7 @@ public class Huanxintest extends StandardFeature{
     {
     	// 原生代码中获取JS层传递的参数，
     	// 参数的获取顺序与JS层传递的顺序一致
-    	appContext = pWebview.getContext();
+    	appContext = pWebview.getActivity().getBaseContext();
         String CallBackID = array.optString(0);
         String ReturnString = "";
         int pid = android.os.Process.myPid();
@@ -109,7 +111,7 @@ public class Huanxintest extends StandardFeature{
     }
     public void onListen (final IWebview pWebview, final JSONArray array){
     	
-    	EMMessageListener msgListener = new EMMessageListener() {
+    	msgListener = new EMMessageListener() {
     	     
     	    @SuppressWarnings("deprecation")
 			@Override
@@ -118,7 +120,7 @@ public class Huanxintest extends StandardFeature{
     	    	String CallbackID = array.optString(0);
     	    	String ReturnString = messages.toString();
     	    	Log.d("HUANXIN ONLISTEN", ReturnString);
-    	    	JSUtil.execCallback(pWebview, CallbackID, ReturnString, JSUtil.OK, false, true); 
+    	    	JSUtil.execCallback(pWebview, CallbackID, ReturnString, JSUtil.OK, false, true);
     	    }
     	     
     	    @Override
@@ -143,7 +145,46 @@ public class Huanxintest extends StandardFeature{
     	};
     	EMClient.getInstance().chatManager().addMessageListener(msgListener);   	
     }
-    
+    public void removeListener(final IWebview pWebview, final JSONArray array){
+    	String CallbackID = array.optString(0);
+    	if(null != msgListener){
+        	EMClient.getInstance().chatManager().removeMessageListener(msgListener);
+        	Log.d("RETURN STRING", msgListener==null?"NULL":"NOT NULL");
+    	}
+    	Log.d("RETURN STRING", "msgListener is already null");
+    	JSUtil.execCallback(pWebview, CallbackID, "操作成功", JSUtil.OK, false);    	
+    }
+    public void getAllConversations (final IWebview pWebview, final JSONArray array){
+    	String CallbackID = array.optString(0);
+    	Map<String, EMConversation> conversations = EMClient.getInstance().chatManager().getAllConversations();
+    	JSONArray newArray = new JSONArray();
+    	for(String key : conversations.keySet()){
+    		String returnObj = "{ \"userID\": \""+key+"\", \"conversationID\": \""+conversations.get(key).conversationId()+"\", " +
+    				"\"msg\":"+conversations.get(key).getLastMessage().getBody().toString().replace("txt:", "")+"}";
+    		newArray.put(returnObj);
+    	}
+    	Log.d("RETURN STRING", newArray.toString());
+    	JSUtil.execCallback(pWebview, CallbackID, newArray, JSUtil.OK, false);
+    }
+    public void getMessage (final IWebview pWebview, final JSONArray array){
+    	String username = array.optString(1);
+    	String CallbackID = array.optString(0);
+    	JSONArray newArray = new JSONArray();
+    	EMConversation conversation = EMClient.getInstance().chatManager().getConversation(username);
+    	//获取此会话的所有消息
+    	List<EMMessage> messages = conversation.getAllMessages();
+    	Log.d("RETURN MESSAGE", messages.toString());
+    	for(int i = 0; i < messages.size(); i++){
+    		EMMessage message = messages.get(i);
+    		String returnObj = "{\"id\":\""+message.getMsgId()+"\",\"from\":\""+message.getFrom()+"\",\"msg\":\""+message.getBody().toString().replace("txt:", "")+"\"}";
+    		newArray.put(returnObj);
+    	}
+    	JSUtil.execCallback(pWebview, CallbackID, newArray, JSUtil.OK, false);
+    	//SDK初始化加载的聊天记录为20条，到顶时需要去DB里获取更多
+    	//获取startMsgId之前的pagesize条消息，此方法获取的messages SDK会自动存入到此会话中，APP中无需再次把获取到的messages添加到会话中
+    	//List<EMMessage> messages = conversation.loadMoreMsgFromDB(startMsgId, pagesize);
+    }
+    private EMMessageListener msgListener;
     private Context appContext;
     private String getAppName(int pID) {
     	if(null == appContext){

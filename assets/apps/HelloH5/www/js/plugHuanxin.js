@@ -45,6 +45,37 @@ document.addEventListener( "plusready",  function()
 			var callbackID = B.callbackId(success);
 			console.log(callbackID);
 			return B.exec(_BARCODE, "onListen", [callbackID]);     		
+    	},
+    	removeListener: function(){
+ 			var success = typeof callback !== 'function' ? null : function(args) 
+			{
+				callback(args);
+			};
+			var callbackID = B.callbackId(success);
+			console.log(callbackID);
+			return B.exec(_BARCODE, "removeListener", [callbackID]);    		
+    	},
+    	getAllConversations: function(callback){//return an object [{userID,conversationID,msg},...]
+  			var success = typeof callback !== 'function' ? null : function(args) 
+			{
+				var con = "["+args.toString()+"]";
+				var conObj = JSON.parse(con);
+				callback(conObj);
+			};
+			var callbackID = B.callbackId(success);
+			console.log(callbackID);
+			return B.exec(_BARCODE, "getAllConversations", [callbackID]);   		
+    	},
+    	loadMessage: function(conversation, callback){
+  			var success = typeof callback !== 'function' ? null : function(args) 
+			{
+				var msgs = "["+args.toString()+"]";
+				var msgsObj = JSON.parse(msgs);
+				callback(msgsObj);
+			};
+			var callbackID = B.callbackId(success);
+			console.log(callbackID);
+			return B.exec(_BARCODE, "getMessage", [callbackID, conversation]);      		
     	}
  	};
     window.plus.plugHuanxin = plugHuanxin;
